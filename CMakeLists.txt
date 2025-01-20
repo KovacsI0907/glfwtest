@@ -18,6 +18,12 @@ set(GLAD_INCLUDE_DIR external/glad/include)
 
 include_directories(${GLAD_INCLUDE_DIR})
 
+# Include directory for your headers
+include_directories(includes)
+
+# Add glm
+include_directories(external/glm)
+
 # Source files
 file(GLOB_RECURSE SOURCES src/*.cpp)
 
