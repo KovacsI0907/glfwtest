@@ -1,59 +1,44 @@
-#ifndef TRIANGLEGEOMETRY_H
-#define TRIANGLEGEOMETRY_H
+#pragma once
 
-#include "Geometry.h"
+#include "NonIndexedGeometry.h"
+#include "glm/glm.hpp"
 
-class TriangleGeometry : public Geometry {
+class TriangleGeometry : public NonIndexedGeometry {
 public:
     TriangleGeometry() {
-        vertices = {
-            -0.6f, -0.4f, 0.0f,
-             0.6f, -0.4f, 0.0f,
-             0.0f,  0.6f, 0.0f
-        };
-
-        uvs = {
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            0.5f, 1.0f
-        };
-
-        normals = {
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f
-        };
-
-        setupBuffers();
+        verts[0] = glm::vec3(0.0f, 0.0f, 0.0f);
+        verts[1] = glm::vec3(1.0f, 0.0f, 0.0f);
+        verts[2] = glm::vec3(0.0, 1.0f, 0.0f);
+        generateGeometry();
+        uploadData();
     }
-
-    void draw() const override {
-        bind();
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        unbind();
+    TriangleGeometry(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+        verts[0] = v0;
+        verts[1] = v1;
+        verts[2] = v2;
+        generateGeometry();
+        uploadData();
     }
 
 protected:
-    void setupBuffers() override {
-        bind();
+    void generateGeometry() override {
+        vertices.push_back(verts[0]);
+        vertices.push_back(verts[1]);
+        vertices.push_back(verts[2]);
 
-        glBindBuffer(GL_ARRAY_BUFFER, vboVertices);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(0);
+        normals.push_back(glm::normalize(glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0])));
+        normals.push_back(glm::normalize(glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0])));
+        normals.push_back(glm::normalize(glm::cross(vertices[1] - vertices[0], vertices[2] - vertices[0])));
 
-        glBindBuffer(GL_ARRAY_BUFFER, vboUVs);
-        glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(float), uvs.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-        glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(2);
-
-        unbind();
+        uvs.push_back(glm::vec2(0.0f, 0.0f));
+        uvs.push_back(glm::vec2(0.0f, 1.0f));
+        uvs.push_back(glm::vec2(1.0f, 1.0f));
     }
-};
 
-#endif // TRIANGLEGEOMETRY_H
+    void drawOnly() override {
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+
+private:
+    glm::vec3 verts[3];
+};

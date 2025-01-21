@@ -5,12 +5,14 @@
 
 struct Transform {
     glm::vec3 position;
-    glm::mat4 rotationMatrix;
+    glm::vec3 axis;
+    float angle;
     glm::vec3 scale;
 
     Transform() 
         : position(0.0f, 0.0f, 0.0f), 
-          rotationMatrix(1.0f), // Identity matrix
+          axis(0.0f, 1.0f, 0.0f),
+          angle(0.0f),
           scale(1.0f, 1.0f, 1.0f) {}
 
     void translate(const glm::vec3& t) {
@@ -18,7 +20,8 @@ struct Transform {
     }
 
     void rotate(const glm::vec3& axis, float angle) {
-        rotationMatrix = glm::rotate(rotationMatrix, angle, axis);
+        this->axis = axis;
+        this->angle = angle;
     }
 
     void Scale(const glm::vec3& s) {
@@ -27,6 +30,7 @@ struct Transform {
 
     glm::mat4 getModelMatrix() const {
         glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
+        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), angle, axis);
         glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
 
         return translationMatrix * rotationMatrix * scaleMatrix;
@@ -34,7 +38,7 @@ struct Transform {
 
     glm::mat4 getInverseModelMatrix() const {
         glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), 1.0f / scale);
-        glm::mat4 rotationMatrixInverse = glm::transpose(rotationMatrix);
+        glm::mat4 rotationMatrixInverse = glm::rotate(glm::mat4(1.0f), -angle, axis);
         glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), -position);
 
         return scaleMatrix * rotationMatrixInverse * translationMatrix;

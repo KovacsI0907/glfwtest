@@ -14,9 +14,18 @@
 #include "Program.h"
 #include "PathResolver.h"
 #include "UniformProvider.h"
-#include "ColoredTriangle.h"
 #include "Mesh.h"
 #include "GameObject.h"
+#include "PerspectiveCamera.h"
+#include "TriangleGeometry.h"
+#include "OpenGLErrorLogger.h"
+#include "CubeGeometry.h"
+#include "OBJGeometry.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+
+using namespace glm;
 
 void error_callback(int error, const char* description)
 {
@@ -38,6 +47,8 @@ int main(void)
 
     glfwSetErrorCallback(error_callback);
 
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
     if (!window)
     {
@@ -53,6 +64,8 @@ int main(void)
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    OpenGLErrorLogger::init();
 
     auto vertex_shader = std::make_shared<Shader>();
     auto fragment_shader = std::make_shared<Shader>();
@@ -78,11 +91,22 @@ int main(void)
         std::cout << e.what() << std::endl;
     }
 
-    auto coloredTriangleGeometry = std::make_shared<ColoredTriangle>();
-
+    auto coloredTriangleGeometry = std::make_shared<TriangleGeometry>();
     auto coloredTriangleMesh = std::make_shared<Mesh>(coloredTriangleGeometry, program);
-
     GameObject gameObject(coloredTriangleMesh);
+
+    auto cubeGeometry = std::make_shared<CubeGeometry>();
+    auto cubeMesh = std::make_shared<Mesh>(cubeGeometry, program);
+    GameObject cube(cubeMesh);
+
+    auto monkeyGeometry = std::make_shared<OBJGeometry>(PathResolver::resolvePath("models/monkey.obj"));
+    auto monkeyMesh = std::make_shared<Mesh>(monkeyGeometry, program);
+    GameObject monkey(monkeyMesh);
+
+
+    auto displayInfo = std::make_shared<DisplayInfo>(640, 480, true, DisplayInfo::Windowed, 0);
+
+    PerspectiveCamera camera(vec3(2.0f, 2.0f, 2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 90.0f, 0.01f, 100.0f, displayInfo);
 
     float time = (float)glfwGetTime();
     float lastTime = time;
@@ -90,26 +114,33 @@ int main(void)
 
     while (!glfwWindowShouldClose(window))
     {
-        float ratio;
         int width, height;
-        glm::mat4 p, vp;
-
         glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float)height;
+        displayInfo->width = width;
+        displayInfo->height = height;
 
         glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
 
         deltaTime = time - lastTime;
         lastTime = time;
         time = (float)glfwGetTime();
 
-        gameObject.transform.rotate(glm::vec3(0.0f, 0.0f, 1.0f), deltaTime);
-        p = glm::ortho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        vp = p;
+        gameObject.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), 0);
+        program->use();
+        UniformProvider::setUniform(program->getID(), "color", vec3(1.0f, 0.0f, 0.0f));
+        gameObject.draw(camera);
 
-        UniformProvider::setUniform(program->getID(), "VP", vp);
-        gameObject.draw();
+        program->use();
+        cube.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
+        UniformProvider::setUniform(program->getID(), "color", vec3(0.0f, 1.0f, 0.0f));
+        //cube.draw(camera);
+
+        program->use();
+        monkey.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
+        UniformProvider::setUniform(program->getID(), "color", vec3(0.0f, 0.0f, 1.0f));
+        monkey.draw(camera);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

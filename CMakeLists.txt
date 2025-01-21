@@ -9,13 +9,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_subdirectory(external/glfw)
 include_directories(external/glfw/include)
 
-# Add linmath.h
-include_directories(external/glfw/deps)
-
 # Add GLAD manually
 set(GLAD_SOURCE external/glad/src/glad.c)
 set(GLAD_INCLUDE_DIR external/glad/include)
-
 include_directories(${GLAD_INCLUDE_DIR})
 
 # Include directory for your headers
@@ -26,9 +22,10 @@ include_directories(external/glm)
 
 # Source files
 file(GLOB_RECURSE SOURCES src/*.cpp)
+file(GLOB_RECURSE HEADERS includes/*.h includes/*.hpp)
 
 # Define the executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${GLAD_SOURCE})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLAD_SOURCE})
 
 # Link dependencies
 target_link_libraries(${PROJECT_NAME} glfw)

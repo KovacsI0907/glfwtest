@@ -19,8 +19,11 @@ public:
         this->transform = transform;
     }
 
-    void draw() {
+    template<typename... UniformProviders>
+    void draw(UniformProviders... providers) {
+		mesh->getProgram()->use();
         uploadUniforms(mesh->getProgram()->getID());
+        (providers.uploadUniforms(mesh->getProgram()->getID()), ...);
         if (mesh) {
             mesh->draw();
         }
