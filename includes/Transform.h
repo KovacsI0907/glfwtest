@@ -36,11 +36,8 @@ struct Transform {
         return translationMatrix * rotationMatrix * scaleMatrix;
     }
 
-    glm::mat4 getInverseModelMatrix() const {
-        glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), 1.0f / scale);
-        glm::mat4 rotationMatrixInverse = glm::rotate(glm::mat4(1.0f), -angle, axis);
-        glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), -position);
-
-        return scaleMatrix * rotationMatrixInverse * translationMatrix;
+    glm::mat3 getNormalMatrix() const {
+        glm::mat4 modelMatrix = getModelMatrix();
+        return glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
     }
 };

@@ -1,4 +1,5 @@
 #include "Program.h"
+#include <glm/glm.hpp>
 
 Program::Program() : programID(glCreateProgram()), isLinked(false) {
     if (programID == 0) {
@@ -73,5 +74,70 @@ void Program::cleanup() {
     if (programID != 0) {
         glDeleteProgram(programID);
         programID = 0;
+    }
+}
+
+void Program::setUniform(const std::string& name, float value) {
+    use();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform1f(location, value);
+    }
+}
+
+void Program::setUniform(const std::string& name, const glm::vec2& v) {
+    use();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform2f(location, v.x, v.y);
+    }
+}
+
+void Program::setUniform(const std::string& name, const glm::vec3& v) {
+    use();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform3f(location, v.x, v.y, v.z);
+    }
+}
+
+void Program::setUniform(const std::string& name, const glm::vec4& v) {
+    use();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform4f(location, v.x, v.y, v.z, v.w);
+    }
+}
+
+void Program::setUniform(const std::string& name, const glm::mat3& mat) {
+    use();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniformMatrix3fv(location, 1, GL_FALSE, &mat[0][0]);
+    }
+}
+
+void Program::setUniform(const std::string& name, const glm::mat4& mat) {
+    use();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
+    }
+}
+
+void Program::setUniform(const std::string& name, ImageTexture2D& texture) {
+    use();
+    glActiveTexture(GL_TEXTURE0);
+    texture.bind();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform1i(location, 0);
+    }
+}
+
+void Program::setUniform(const std::string& name, int num) {
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform1i(location, num);
     }
 }

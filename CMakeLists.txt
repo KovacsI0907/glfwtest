@@ -20,12 +20,14 @@ include_directories(includes)
 # Add glm
 include_directories(external/glm)
 
+include_directories(${CMAKE_SOURCE_DIR}/external)
+
 # Source files
 file(GLOB_RECURSE SOURCES src/*.cpp)
 file(GLOB_RECURSE HEADERS includes/*.h includes/*.hpp)
 
 # Define the executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLAD_SOURCE})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLAD_SOURCE} )
 
 # Link dependencies
 target_link_libraries(${PROJECT_NAME} glfw)

@@ -6,6 +6,8 @@
 #include "DisplayInfo.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
+#include <memory>
+#include "Program.h"
 
 class PerspectiveCamera : public UniformProvider {
 public:
@@ -26,8 +28,8 @@ public:
         return glm::perspective(fov, asp, fp, bp);
     }
 
-    void uploadUniforms(GLuint programID) override {
-        setUniform(programID, "VP", P() * V());
-        setUniform(programID, "camPosW", wEye);
+    void uploadUniforms(std::shared_ptr<Program> program) override {
+        program->setUniform("VP", P() * V());
+        program->setUniform("camPosW", wEye);
     }
 };
