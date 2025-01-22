@@ -29,7 +29,7 @@ public:
     void setUniform(const std::string& name, const glm::vec4& v);
     void setUniform(const std::string& name, const glm::mat3& mat);
     void setUniform(const std::string& name, const glm::mat4& mat);
-    void setUniform(const std::string& name, ImageTexture2D& texture);
+    void setUniform(const std::string& name, GPUTexture2D& texture, GLuint slot);
     void setUniform(const std::string& name, int num);
 
 private:

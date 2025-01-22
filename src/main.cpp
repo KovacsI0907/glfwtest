@@ -25,6 +25,7 @@
 #include "QuadGeometry.h"
 #include "PointLight.h"
 #include "PBRMaterial.h"
+#include "SingleValueTexture.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -124,6 +125,7 @@ int main(void)
     }
 
     ImageTexture2D uvgrid(PathResolver::resolvePath("textures/uvgrid.png"));
+    SingleValueTexture fullWhiteTexture(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     try{
         uvgrid.load();
@@ -190,8 +192,8 @@ int main(void)
         lastTime = time;
         time = (float)glfwGetTime();
 
-        texturedProgram->setUniform("albedoMap", uvgrid);
-        //quad.draw(camera);
+        texturedProgram->setUniform("albedoMap", fullWhiteTexture, 0);
+        quad.draw(camera);
 
         cube.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
         program->setUniform("color", vec3(0.0f, 1.0f, 0.0f));
@@ -209,14 +211,14 @@ int main(void)
         smoothIcoSphere.transform.position = (glm::vec3(-1.0f, 0.0f, 0.0f));
         smoothIcoSphere.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
         smoothNormalsObject.transform = smoothIcoSphere.transform;
-        smoothIcoSphere.draw(camera);
-        smoothNormalsObject.draw(camera);
+        //smoothIcoSphere.draw(camera);
+        //smoothNormalsObject.draw(camera);
 
         flatIcoSphere.transform.position = (glm::vec3(1.0f, 0.0f, 0.0f));
         flatIcoSphere.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
         flatNormalsObject.transform = flatIcoSphere.transform;
-        flatIcoSphere.draw(camera);
-        flatNormalsObject.draw(camera);
+        //flatIcoSphere.draw(camera);
+        //flatNormalsObject.draw(camera);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

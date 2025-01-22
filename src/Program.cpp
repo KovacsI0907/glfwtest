@@ -125,13 +125,13 @@ void Program::setUniform(const std::string& name, const glm::mat4& mat) {
     }
 }
 
-void Program::setUniform(const std::string& name, ImageTexture2D& texture) {
+void Program::setUniform(const std::string& name, GPUTexture2D& texture, GLuint slot) {
     use();
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0 + slot);
     texture.bind();
     GLint location = glGetUniformLocation(programID, name.c_str());
     if (location >= 0) {
-        glUniform1i(location, 0);
+        glUniform1i(location, slot);
     }
 }
 
