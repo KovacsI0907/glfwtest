@@ -2,6 +2,7 @@
 layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec3 vNormal;
 layout(location = 2) in vec2 vUV;
+layout(location = 3) in vec3 vTangent;
 
 uniform mat4 M;
 uniform mat3 N;
@@ -11,6 +12,7 @@ uniform mat4 VP;
 out vec3 worldPos;
 out vec3 worldNormal;
 out vec2 texCoord;
+out vec3 worldTangent;
 
 out VS_OUT {
     vec3 normal;
@@ -23,6 +25,7 @@ void main()
 
     worldPos = (M * vec4(vPos, 1.0)).xyz;
     worldNormal = normalize(N * vNormal);
+    worldTangent = normalize(N * vTangent);
 
     vs_out.normal = normalize(N * vNormal);
 

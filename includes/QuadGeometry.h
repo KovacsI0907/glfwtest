@@ -46,6 +46,13 @@ protected:
         uvs.push_back(glm::vec2(1.0f, 0.0f)); // Bottom right
         uvs.push_back(glm::vec2(0.0f, 1.0f)); // Top left
         uvs.push_back(glm::vec2(1.0f, 1.0f)); // Top right
+
+        tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
+        tangents.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
     }
 
     void drawOnly() override {

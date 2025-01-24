@@ -26,6 +26,10 @@
 #include "PointLight.h"
 #include "PBRMaterial.h"
 #include "SingleValueTexture.h"
+#include "MappedPBRMaterial.h"
+#include "AlternativeObjLoader.h"
+#include "NonIndexedOBJ.h"
+#include "Transformation.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -41,6 +45,36 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+glm::vec2 lastMousePos(0.0f, 0.0f);
+bool firstMouse = true;
+bool isLeftMouseDown = false;
+
+
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            isLeftMouseDown = true;
+        } else if (action == GLFW_RELEASE) {
+            isLeftMouseDown = false;
+        }
+    }
+}
+
+void cursorPosCallback(GLFWwindow* window, double xPos, double yPos) {
+    glm::vec2 currentPos(xPos, yPos);
+    glm::vec2 delta = currentPos - lastMousePos;
+    lastMousePos = currentPos;
+
+    if (firstMouse) {
+        delta = glm::vec2(0.0f);
+        firstMouse = false;
+    }
+
+    if (isLeftMouseDown) {
+        std::cout << "Dragging camera: " << glm::to_string(delta) << std::endl;
+    }
 }
 
 int main(void)
@@ -63,6 +97,8 @@ int main(void)
 
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
+    glfwSetCursorPosCallback(window, cursorPosCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -78,6 +114,7 @@ int main(void)
     auto normal_geo_shader = std::make_shared<Shader>();
     auto normal_frag_shader = std::make_shared<Shader>();
     auto pbr_frag_shader = std::make_shared<Shader>();
+    auto pbr_frag_shader_mapped = std::make_shared<Shader>();
     try {
         vertex_shader->load(PathResolver::resolvePath("shaders/vertex_shader.glsl"));
         fragment_shader->load(PathResolver::resolvePath("shaders/fragment_shader.glsl"));
@@ -85,6 +122,7 @@ int main(void)
         normal_geo_shader->load(PathResolver::resolvePath("shaders/normals_geometry_shader.glsl"));
         normal_frag_shader->load(PathResolver::resolvePath("shaders/normals_fragment_shader.glsl"));
         pbr_frag_shader->load(PathResolver::resolvePath("shaders/pbr_fragment.glsl"));
+        pbr_frag_shader_mapped->load(PathResolver::resolvePath("shaders/pbr_fragment_mapped.glsl"));
 
         vertex_shader->compile(GL_VERTEX_SHADER);
         fragment_shader->compile(GL_FRAGMENT_SHADER);
@@ -92,6 +130,7 @@ int main(void)
         normal_geo_shader->compile(GL_GEOMETRY_SHADER);
         normal_frag_shader->compile(GL_FRAGMENT_SHADER);
         pbr_frag_shader->compile(GL_FRAGMENT_SHADER);
+        pbr_frag_shader_mapped->compile(GL_FRAGMENT_SHADER);
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -101,6 +140,7 @@ int main(void)
     auto texturedProgram = std::make_shared<Program>();
     auto normalProgram = std::make_shared<Program>();
     auto pbrProgram = std::make_shared<Program>();
+    auto mappedPbrProgram = std::make_shared<Program>();
 
     try{
         program->attachShader(vertex_shader);
@@ -119,31 +159,54 @@ int main(void)
         pbrProgram->attachShader(vertex_shader);
         pbrProgram->attachShader(pbr_frag_shader);
         pbrProgram->link();
+
+        mappedPbrProgram->attachShader(vertex_shader);
+        mappedPbrProgram->attachShader(pbr_frag_shader_mapped);
+        mappedPbrProgram->link();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
     }
 
     ImageTexture2D uvgrid(PathResolver::resolvePath("textures/uvgrid.png"));
-    SingleValueTexture fullWhiteTexture(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    auto cerberusAlbedo = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_albedo.png"));
+    auto cerberusMetallic = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_metalness.png"));
+    auto cerberusRoughness = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_roughness.png"));
+    auto cerberusNormal = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_normal.png"));
+    auto brickNormal = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/brick_normal.png"));
+    auto fullWhiteTexture = std::make_shared<SingleValueTexture>(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     try{
         uvgrid.load();
+        cerberusAlbedo->load();
+        cerberusMetallic->load();
+        cerberusRoughness->load();
+        cerberusNormal->load();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
     }
+
+    MappedPBRMaterial cerberusMaterial;
+
+    cerberusMaterial.albedo = cerberusAlbedo;
+    cerberusMaterial.metallic = cerberusMetallic;
+    cerberusMaterial.roughness = cerberusRoughness;
+    cerberusMaterial.ao = fullWhiteTexture;
+    cerberusMaterial.normal = cerberusNormal;
 
     auto quadGeometry = std::make_shared<QuadGeometry>();
     auto cubeGeometry = std::make_shared<CubeGeometry>();
     auto monkeyGeometry = std::make_shared<OBJGeometry>(PathResolver::resolvePath("models/monkey.obj"));
     auto smoothIcoSphereGeometry = std::make_shared<OBJGeometry>(PathResolver::resolvePath("models/icosphere_smooth_high.obj"));
     auto flatIcoSphereGeometry = std::make_shared<OBJGeometry>(PathResolver::resolvePath("models/icosphere_flat_high.obj"));
+    auto cerberusGeometry = std::make_shared<NonIndexedObj>(PathResolver::resolvePath("models/cerberus.obj"));
 
     auto quadMesh = std::make_shared<Mesh>(quadGeometry, texturedProgram);
     auto cubeMesh = std::make_shared<Mesh>(cubeGeometry, program);
     auto monkeyMesh = std::make_shared<Mesh>(monkeyGeometry, texturedProgram);
     auto normalsMesh = std::make_shared<Mesh>(monkeyGeometry, normalProgram);
+    auto cerberusMesh = std::make_shared<Mesh>(cerberusGeometry, mappedPbrProgram);
 
     auto smoothIcoSphereMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, pbrProgram);
     auto smoothNormalsMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, normalProgram);
@@ -160,7 +223,9 @@ int main(void)
     GameObject smoothNormalsObject(smoothNormalsMesh);
     GameObject flatNormalsObject(flatNormalsMesh);
 
-    PointLight light1(vec3(3.0f, 3.0f, 1.0f), vec3(100.0f, 100.0f, 100.0f));
+    GameObject cerberus(cerberusMesh);
+
+    PointLight light1(vec3(3.0f, 3.0f, 3.0f), vec3(100.0f, 100.0f, 100.0f));
     PBRMaterial material;
     material.albedo = vec3(1.0f, 0.0f, 0.0f);
     material.metallic = 0.2f;
@@ -171,7 +236,7 @@ int main(void)
 
     auto displayInfo = std::make_shared<DisplayInfo>(640, 480, true, DisplayInfo::Windowed, 0);
 
-    PerspectiveCamera camera(vec3(0.0f, 2.0f, 2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 90.0f, 0.01f, 100.0f, displayInfo);
+    PerspectiveCamera camera(vec3(0.0f, 0, 2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 45.0f, 0.01f, 100.0f, displayInfo);
 
     float time = (float)glfwGetTime();
     float lastTime = time;
@@ -192,33 +257,49 @@ int main(void)
         lastTime = time;
         time = (float)glfwGetTime();
 
-        texturedProgram->setUniform("albedoMap", fullWhiteTexture, 0);
-        quad.draw(camera);
+        cerberusMaterial.uploadUniforms(mappedPbrProgram);
 
-        cube.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
+        texturedProgram->setUniform("albedoMap", uvgrid, 0);
+        //quad.draw(camera);
+
+        cube.transformations.reset();
+        cube.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), time));
         program->setUniform("color", vec3(0.0f, 1.0f, 0.0f));
         //cube.draw(camera);
 
         texturedProgram->use();
-        monkey.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
-        normalsObject.transform = monkey.transform;
+        monkey.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), deltaTime));
+        monkey.transformations.apply();
+        normalsObject.transformations = monkey.transformations;
         //monkey.draw(camera);
         //normalsObject.draw(camera);
 
         material.uploadUniforms(pbrProgram);
         light1.uploadUniforms(pbrProgram);
 
-        smoothIcoSphere.transform.position = (glm::vec3(-1.0f, 0.0f, 0.0f));
-        smoothIcoSphere.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
-        smoothNormalsObject.transform = smoothIcoSphere.transform;
+        smoothIcoSphere.transformations.reset();
+        smoothIcoSphere.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), time));
+        smoothIcoSphere.transformations.addTransformation(Translation(glm::vec3(-1.0f, 0.0f, 0.0f)));
+        smoothNormalsObject.transformations = smoothIcoSphere.transformations;
         //smoothIcoSphere.draw(camera);
         //smoothNormalsObject.draw(camera);
 
-        flatIcoSphere.transform.position = (glm::vec3(1.0f, 0.0f, 0.0f));
-        flatIcoSphere.transform.rotate(glm::vec3(0.0f, 1.0f, 0.0f), time);
-        flatNormalsObject.transform = flatIcoSphere.transform;
+        flatIcoSphere.transformations.reset();
+        flatIcoSphere.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), time));
+        flatIcoSphere.transformations.addTransformation(Translation(glm::vec3(1.0f, 0.0f, 0.0f)));
+        flatNormalsObject.transformations = flatIcoSphere.transformations;
         //flatIcoSphere.draw(camera);
         //flatNormalsObject.draw(camera);
+
+        cerberusMaterial.uploadUniforms(mappedPbrProgram);
+        light1.uploadUniforms(mappedPbrProgram);
+
+        cerberus.transformations.reset();
+        cerberus.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), 3.14f/2.0f));
+        cerberus.transformations.addTransformation(Scale(glm::vec3(3.0f)));
+        cerberus.draw(camera);
+
+        light1.position = vec3(3.0f * cos(time), 3.0f, 3.0f * sin(time));
 
         glfwSwapBuffers(window);
         glfwPollEvents();

@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include "UniformProvider.h"
 #include "Mesh.h"
-#include "Transform.h"
+#include "Transformation.h"
 #include <Program.h>
 
 class GameObject : public UniformProvider {
@@ -14,10 +14,6 @@ public:
 
     void setMesh(std::shared_ptr<Mesh> mesh) {
         this->mesh = mesh;
-    }
-
-    void setTransform(const Transform& transform) {
-        this->transform = transform;
     }
 
     template<typename... UniformProviders>
@@ -33,14 +29,14 @@ public:
     }
 
     void uploadUniforms(std::shared_ptr<Program> program) override {
-        glm::mat4 modelMatrix = transform.getModelMatrix();
-        glm::mat3 normalMatrix = transform.getNormalMatrix();
+        glm::mat4 modelMatrix = transformations.getModelMatrix();
+        glm::mat3 normalMatrix = transformations.getNormalMatrix();
         
         program->setUniform("M", modelMatrix);
         program->setUniform("N", normalMatrix);
     }
 public:
-    Transform transform;
+    TransformationChain transformations;
 private:
     std::shared_ptr<Mesh> mesh;
 };
