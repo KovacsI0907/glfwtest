@@ -2,89 +2,62 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <vector>
-#include <memory>
+#include <glm/gtc/quaternion.hpp>
 
-class Transformation {
+class Transform {
 public:
-    virtual glm::mat4 getModelMatrix() const = 0;
-    virtual ~Transformation() = default;
-};
+    Transform()
+        : rotation(glm::angleAxis(0.0f, glm::vec3(0.0f, 0.0f, 0.0f))), position(glm::vec3(0.0f)), scale(glm::vec3(1.0f)) {}
 
-class Rotation : public Transformation {
-public:
-    Rotation(glm::vec3 axis, float angle) : axis(axis), angle(angle) {}
-
-    glm::mat4 getModelMatrix() const override{
-        return glm::rotate(glm::mat4(1.0f), angle, axis);
+    // Translate the transform by a vector
+    void translate(const glm::vec3& translation) {
+        position += translation;
     }
 
-    glm::vec3 axis;
-    float angle;
-};
-
-class Translation : public Transformation {
-public:
-    Translation(glm::vec3 position) : position(position) {}
-
-    glm::mat4 getModelMatrix() const override{
-        return glm::translate(glm::mat4(1.0f), position);
+    // Rotate the transform by a quaternion
+    void rotate(const glm::vec3& axis, float angle) {
+        rotation = glm::angleAxis(angle, glm::normalize(axis)) * rotation; // Apply the rotation
     }
 
-    glm::vec3 position;
-};
-
-class Scale : public Transformation {
-public:
-    Scale(glm::vec3 scale) : scale(scale) {}
-
-    glm::mat4 getModelMatrix() const override {
-        return glm::scale(glm::mat4(1.0f), scale);
+    // Scale the transform
+    void scaleTransform(const glm::vec3& scaling) {
+        scale *= scaling; // Element-wise scaling
     }
 
-    glm::vec3 scale;
-};
-
-class TransformationChain {
-public:
-    TransformationChain() : appliedTransformations(1.0f) {}
-
-    void addTransformation(std::shared_ptr<Transformation> transformation) {
-        transformations.push_back(transformation);
+    // Rotate around a pivot point
+    void rotateAroundPivot(const glm::vec3& pivot, const glm::vec3& axis, float angle) {
+        glm::quat deltaRotation = glm::angleAxis(angle, axis);
+        glm::vec3 direction = position - pivot;
+        direction = deltaRotation * direction;
+        position = pivot + direction;
+        rotation = deltaRotation * rotation;
     }
 
-    template<typename T>
-    void addTransformation(T transformation) {
-        static_assert(std::is_base_of<Transformation, T>::value, "T must be derived from Transformation");
-        transformations.push_back(std::make_shared<T>(transformation));
-    }
-
+    // Generate the model matrix
     glm::mat4 getModelMatrix() const {
-        glm::mat4 modelMatrix = glm::mat4(1.0f) * appliedTransformations;
-        for (auto& transformation : transformations) {
-            modelMatrix *= transformation->getModelMatrix();
-        }
-        return modelMatrix;
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, position); // Apply translation
+        model *= glm::mat4_cast(rotation);          // Apply rotation
+        model = glm::scale(model, scale);        // Apply scaling
+        return model;
     }
 
+    // Generate the normal matrix (for transforming normal vectors in shaders)
     glm::mat3 getNormalMatrix() const {
-        glm::mat4 modelMatrix = getModelMatrix();
-        return glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
-    }
+        // Get the model matrix
+        glm::mat4 model = getModelMatrix();
+        
+        // Extract the upper-left 3x3 portion (no translation)
+        glm::mat3 normalMatrix = glm::mat3(model);
 
-    void reset() {
-        transformations.clear();
-    }
+        // Compute the inverse transpose for correct normal transformations
+        normalMatrix = glm::inverse(glm::transpose(normalMatrix));
 
-    void resetAppliedTransformations() {
-        appliedTransformations = glm::mat4(1.0f);
-    }
-
-    void apply() {
-        appliedTransformations = getModelMatrix();
+        return normalMatrix;
     }
 
 private:
-    std::vector<std::shared_ptr<Transformation>> transformations;
-    glm::mat4 appliedTransformations;
+    glm::quat rotation; // Stores rotation as a quaternion
+    glm::vec3 position; // Stores the position of the transform
+    glm::vec3 scale;    // Stores the scale of the transform
 };

@@ -29,14 +29,14 @@ public:
     }
 
     void uploadUniforms(std::shared_ptr<Program> program) override {
-        glm::mat4 modelMatrix = transformations.getModelMatrix();
-        glm::mat3 normalMatrix = transformations.getNormalMatrix();
+        glm::mat4 modelMatrix = transform.getModelMatrix();
+        glm::mat3 normalMatrix = transform.getNormalMatrix();
         
         program->setUniform("M", modelMatrix);
         program->setUniform("N", normalMatrix);
     }
 public:
-    TransformationChain transformations;
+    Transform transform;
 private:
     std::shared_ptr<Mesh> mesh;
 };

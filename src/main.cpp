@@ -51,6 +51,7 @@ glm::vec2 lastMousePos(0.0f, 0.0f);
 bool firstMouse = true;
 bool isLeftMouseDown = false;
 
+PerspectiveCamera* cameraPtr = nullptr;
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -73,7 +74,25 @@ void cursorPosCallback(GLFWwindow* window, double xPos, double yPos) {
     }
 
     if (isLeftMouseDown) {
-        std::cout << "Dragging camera: " << glm::to_string(delta) << std::endl;
+        if(cameraPtr!=nullptr) {
+            cameraPtr->transform.rotateAroundPivot(vec3(0.0f), vec3(0.0f, 1.0f, 0.0f), -delta.x/100.f);
+            glm::vec3 right = glm::normalize(glm::cross(cameraPtr->wLookat - cameraPtr->wEye(), cameraPtr->wVup));
+            cameraPtr->transform.rotateAroundPivot(vec3(0.0f), right, -delta.y/100.f);
+        }
+    }
+}
+
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    if (cameraPtr != nullptr) {
+        float zoomAmount = static_cast<float>(yoffset) * 0.1f;
+        std::cout << cameraPtr->fov << std::endl;
+        cameraPtr->fov -= zoomAmount;
+        if (cameraPtr->fov < 0.0001f) {
+            cameraPtr->fov = 0.0001f;
+        }
+        if (cameraPtr->fov > 3.14f) {
+            cameraPtr->fov = 3.14f;
+        }
     }
 }
 
@@ -99,6 +118,7 @@ int main(void)
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, cursorPosCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetScrollCallback(window, scrollCallback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -236,7 +256,9 @@ int main(void)
 
     auto displayInfo = std::make_shared<DisplayInfo>(640, 480, true, DisplayInfo::Windowed, 0);
 
-    PerspectiveCamera camera(vec3(0.0f, 0, 2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 45.0f, 0.01f, 100.0f, displayInfo);
+    PerspectiveCamera camera(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 45.0f, 0.01f, 100.0f, displayInfo);
+    camera.transform.translate(vec3(0.0f, 0.0f, 3.0f));
+    cameraPtr = &camera;
 
     float time = (float)glfwGetTime();
     float lastTime = time;
@@ -262,41 +284,24 @@ int main(void)
         texturedProgram->setUniform("albedoMap", uvgrid, 0);
         //quad.draw(camera);
 
-        cube.transformations.reset();
-        cube.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), time));
         program->setUniform("color", vec3(0.0f, 1.0f, 0.0f));
         //cube.draw(camera);
 
         texturedProgram->use();
-        monkey.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), deltaTime));
-        monkey.transformations.apply();
-        normalsObject.transformations = monkey.transformations;
         //monkey.draw(camera);
         //normalsObject.draw(camera);
 
         material.uploadUniforms(pbrProgram);
         light1.uploadUniforms(pbrProgram);
 
-        smoothIcoSphere.transformations.reset();
-        smoothIcoSphere.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), time));
-        smoothIcoSphere.transformations.addTransformation(Translation(glm::vec3(-1.0f, 0.0f, 0.0f)));
-        smoothNormalsObject.transformations = smoothIcoSphere.transformations;
         //smoothIcoSphere.draw(camera);
         //smoothNormalsObject.draw(camera);
 
-        flatIcoSphere.transformations.reset();
-        flatIcoSphere.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), time));
-        flatIcoSphere.transformations.addTransformation(Translation(glm::vec3(1.0f, 0.0f, 0.0f)));
-        flatNormalsObject.transformations = flatIcoSphere.transformations;
         //flatIcoSphere.draw(camera);
         //flatNormalsObject.draw(camera);
 
         cerberusMaterial.uploadUniforms(mappedPbrProgram);
         light1.uploadUniforms(mappedPbrProgram);
-
-        cerberus.transformations.reset();
-        cerberus.transformations.addTransformation(Rotation(glm::vec3(0.0f, 1.0f, 0.0f), 3.14f/2.0f));
-        cerberus.transformations.addTransformation(Scale(glm::vec3(3.0f)));
         cerberus.draw(camera);
 
         light1.position = vec3(3.0f * cos(time), 3.0f, 3.0f * sin(time));
