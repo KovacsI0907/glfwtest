@@ -30,6 +30,7 @@
 #include "AlternativeObjLoader.h"
 #include "NonIndexedOBJ.h"
 #include "Transformation.h"
+#include "DirectionalLight.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -267,13 +268,15 @@ int main(void)
     GameObject cerberusNormals(cerberusNormalsMesh);
     cerberus.transform.Scale(vec3(5.0f));
 
-    PointLight light1(vec3(1.0f, 1.0f, 1.0f), vec3(100.0f, 100.0f, 100.0f));
+    PointLight light1(vec3(1.0f, 1.0f, 1.0f), vec3(10.0f, 10.0f, 10.0f));
     GameObject light1Object(lightMesh);
     light1Object.transform.Scale(vec3(0.2f));
 
-    PointLight light2(vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 500.0f));
+    PointLight light2(vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 50.0f));
     GameObject light2Object(lightMesh);
     light2Object.transform.Scale(vec3(0.2f));
+
+    DirectionalLight sunLight(vec3(0.0f, -1.0f, 0.0f), vec3(20.0f, 20.0f, 20.0f));
 
     PBRMaterial material;
     material.albedo = vec3(1.0f, 0.0f, 0.0f);
@@ -329,16 +332,18 @@ int main(void)
         material.uploadUniforms(pbrProgram);
         light1.uploadUniforms(pbrProgram);
         light2.uploadUniforms(pbrProgram);
+        sunLight.uploadUniforms(pbrProgram);
 
         //smoothIcoSphere.draw(camera);
         //smoothNormalsObject.draw(camera);
 
-        //flatIcoSphere.draw(camera);
+        flatIcoSphere.draw(camera);
         //flatNormalsObject.draw(camera);
 
         cerberusMaterial.uploadUniforms(mappedPbrProgram);
         light1.uploadUniforms(mappedPbrProgram);
         light2.uploadUniforms(mappedPbrProgram);
+        sunLight.uploadUniforms(mappedPbrProgram);
         cerberusNormals.transform = cerberus.transform;
         //cerberusNormals.draw(camera);
         cerberus.draw(camera);

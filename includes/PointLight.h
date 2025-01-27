@@ -29,9 +29,9 @@ public:
     {}
 
     void uploadUniforms(std::shared_ptr<Program> program) override {
-        program->setUniform("lightPositions[" + std::to_string(index) + "]", position);
-        program->setUniform("lightColors[" + std::to_string(index) + "]", color);
-        program->setUniform("numLights", currentIndex);
+        program->setUniform("pointLights[" + std::to_string(index) + "].position", position);
+        program->setUniform("pointLights[" + std::to_string(index) + "].color", color);
+        program->setUniform("numPointLights", currentIndex);
     }
 
     static void resetLightCount() {
@@ -43,7 +43,7 @@ private:
 
     static int getNextIndex() {
         if (currentIndex >= MAX_LIGHTS) {
-            throw std::runtime_error("Exceeded maximum number of lights (" + std::to_string(MAX_LIGHTS) + ")");
+            throw std::runtime_error("Exceeded maximum number of point lights (" + std::to_string(MAX_LIGHTS) + ")");
         }
         return currentIndex++;
     }
