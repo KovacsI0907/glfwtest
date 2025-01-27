@@ -14,7 +14,13 @@ public:
 class ImageTexture2D : public GPUTexture2D
 {
 public:
-	ImageTexture2D(std::filesystem::path path);
+	enum Type {
+		Color,
+		Normal,
+		Data
+	};
+
+	ImageTexture2D(std::filesystem::path path, Type type = Type::Color);
 
 	void load();
 

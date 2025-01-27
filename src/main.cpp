@@ -207,10 +207,10 @@ int main(void)
 
     ImageTexture2D uvgrid(PathResolver::resolvePath("textures/uvgrid.png"));
     auto cerberusAlbedo = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_albedo.png"));
-    auto cerberusMetallic = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_metalness.png"));
-    auto cerberusRoughness = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_roughness.png"));
-    auto cerberusNormal = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_normal.png"));
-    auto brickNormal = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/brick_normal.png"));
+    auto cerberusMetallic = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_metalness.png"), ImageTexture2D::Type::Data);
+    auto cerberusRoughness = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_roughness.png"), ImageTexture2D::Type::Data);
+    auto cerberusNormal = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_normal.png"), ImageTexture2D::Type::Normal);
+    auto brickNormal = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/brick_normal.png"), ImageTexture2D::Type::Normal);
     auto fullWhiteTexture = std::make_shared<SingleValueTexture>(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     try{

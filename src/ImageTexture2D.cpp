@@ -3,7 +3,18 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
-ImageTexture2D::ImageTexture2D(std::filesystem::path path) : path(path) {}
+ImageTexture2D::ImageTexture2D(std::filesystem::path path, Type type) : path(path) {
+    if(type == Type::Color) {
+        setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+        setMagFilter(GL_LINEAR);
+    } else if(type == Type::Normal) {
+        setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+        setMagFilter(GL_LINEAR);
+    } else if(type == Type::Data) {
+        setMinFilter(GL_NEAREST);
+        setMagFilter(GL_NEAREST);
+    }
+}
 
 void ImageTexture2D::load() {
     bind();
