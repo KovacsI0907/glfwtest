@@ -20,7 +20,7 @@ public:
     }
 
     // Scale the transform
-    void scaleTransform(const glm::vec3& scaling) {
+    void Scale(const glm::vec3& scaling) {
         scale *= scaling; // Element-wise scaling
     }
 
@@ -56,7 +56,6 @@ public:
         return normalMatrix;
     }
 
-private:
     glm::quat rotation; // Stores rotation as a quaternion
     glm::vec3 position; // Stores the position of the transform
     glm::vec3 scale;    // Stores the scale of the transform

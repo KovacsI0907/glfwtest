@@ -7,10 +7,11 @@ in vec3 worldTangent;
 
 // material parameters
 
+// mapped material parameters
 uniform sampler2D albedoMap;
 uniform sampler2D metallicMap;
-uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
+uniform sampler2D roughnessMap;
 uniform sampler2D normalMap;
 
 // lights
@@ -88,26 +89,19 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 // ----------------------------------------------------------------------------
 void main()
 {	
+    // calculate mapped normal
+    vec3 cotangent = cross(worldTangent, worldNormal);
+    vec3 mapValue = texture(normalMap, texCoord).xyz * 2.0 - 1.0;
+    vec3 mappedNormal = worldTangent * mapValue.x + cotangent * mapValue.y + worldNormal * mapValue.z;
+
+    vec3 N = normalize(mappedNormal);
+    vec3 V = normalize(camPosW - worldPos);
+
+    // gather material data from textures
     vec3 albedo = texture(albedoMap, texCoord).rgb;
     float metallic = texture(metallicMap, texCoord).r;
     float roughness = texture(roughnessMap, texCoord).r;
     float ao = texture(aoMap, texCoord).r;
-
-    vec3 N = normalize(worldNormal);
-    vec3 T = normalize(worldTangent);
-    vec3 B = normalize(cross(N, T));
-
-    // Convert texture normal from [0..1] to [-1..1]
-    vec3 texNormal = normalize(texture(normalMap, texCoord).rbg * 2.0 - 1.0);
-
-    // Build TBN matrix
-    mat3 TBN = mat3(T, B, N);
-
-    // Get final normal in world space
-    vec3 finalNormal = TBN * texNormal;
-
-    N = normalize(finalNormal);
-    vec3 V = normalize(camPosW - worldPos);
 
     // calculate reflectance at worldNormal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    

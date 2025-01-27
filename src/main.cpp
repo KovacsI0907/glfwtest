@@ -83,15 +83,22 @@ void cursorPosCallback(GLFWwindow* window, double xPos, double yPos) {
 }
 
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-    if (cameraPtr != nullptr) {
+    /*if (cameraPtr != nullptr) {
         float zoomAmount = static_cast<float>(yoffset) * 0.1f;
-        std::cout << cameraPtr->fov << std::endl;
         cameraPtr->fov -= zoomAmount;
         if (cameraPtr->fov < 0.0001f) {
             cameraPtr->fov = 0.0001f;
         }
         if (cameraPtr->fov > 3.14f) {
             cameraPtr->fov = 3.14f;
+        }
+    }*/
+
+   if(cameraPtr != nullptr) {
+        if(yoffset > 0) {
+            cameraPtr->transform.position *= 1.0f/1.1f;
+        } else {
+            cameraPtr->transform.position *= 1.1f;
         }
     }
 }
@@ -135,6 +142,7 @@ int main(void)
     auto normal_frag_shader = std::make_shared<Shader>();
     auto pbr_frag_shader = std::make_shared<Shader>();
     auto pbr_frag_shader_mapped = std::make_shared<Shader>();
+    auto light_frag_shader = std::make_shared<Shader>();
     try {
         vertex_shader->load(PathResolver::resolvePath("shaders/vertex_shader.glsl"));
         fragment_shader->load(PathResolver::resolvePath("shaders/fragment_shader.glsl"));
@@ -144,6 +152,8 @@ int main(void)
         pbr_frag_shader->load(PathResolver::resolvePath("shaders/pbr_fragment.glsl"));
         pbr_frag_shader_mapped->load(PathResolver::resolvePath("shaders/pbr_fragment_mapped.glsl"));
 
+        light_frag_shader->load(PathResolver::resolvePath("shaders/light_fragment.glsl"));
+
         vertex_shader->compile(GL_VERTEX_SHADER);
         fragment_shader->compile(GL_FRAGMENT_SHADER);
         texture_frag_shader->compile(GL_FRAGMENT_SHADER);
@@ -151,6 +161,8 @@ int main(void)
         normal_frag_shader->compile(GL_FRAGMENT_SHADER);
         pbr_frag_shader->compile(GL_FRAGMENT_SHADER);
         pbr_frag_shader_mapped->compile(GL_FRAGMENT_SHADER);
+
+        light_frag_shader->compile(GL_FRAGMENT_SHADER);
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -161,6 +173,7 @@ int main(void)
     auto normalProgram = std::make_shared<Program>();
     auto pbrProgram = std::make_shared<Program>();
     auto mappedPbrProgram = std::make_shared<Program>();
+    auto lightProgram = std::make_shared<Program>();
 
     try{
         program->attachShader(vertex_shader);
@@ -183,6 +196,10 @@ int main(void)
         mappedPbrProgram->attachShader(vertex_shader);
         mappedPbrProgram->attachShader(pbr_frag_shader_mapped);
         mappedPbrProgram->link();
+
+        lightProgram->attachShader(vertex_shader);
+        lightProgram->attachShader(light_frag_shader);
+        lightProgram->link();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -227,6 +244,8 @@ int main(void)
     auto monkeyMesh = std::make_shared<Mesh>(monkeyGeometry, texturedProgram);
     auto normalsMesh = std::make_shared<Mesh>(monkeyGeometry, normalProgram);
     auto cerberusMesh = std::make_shared<Mesh>(cerberusGeometry, mappedPbrProgram);
+    auto cerberusNormalsMesh = std::make_shared<Mesh>(cerberusGeometry, normalProgram);
+    auto lightMesh = std::make_shared<Mesh>(cubeGeometry, lightProgram);
 
     auto smoothIcoSphereMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, pbrProgram);
     auto smoothNormalsMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, normalProgram);
@@ -244,11 +263,20 @@ int main(void)
     GameObject flatNormalsObject(flatNormalsMesh);
 
     GameObject cerberus(cerberusMesh);
+    GameObject cerberusNormals(cerberusNormalsMesh);
+    cerberus.transform.Scale(vec3(5.0f));
 
-    PointLight light1(vec3(3.0f, 3.0f, 3.0f), vec3(100.0f, 100.0f, 100.0f));
+    PointLight light1(vec3(1.0f, 1.0f, 1.0f), vec3(100.0f, 100.0f, 100.0f));
+    GameObject light1Object(lightMesh);
+    light1Object.transform.Scale(vec3(0.2f));
+
+    PointLight light2(vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 500.0f));
+    GameObject light2Object(lightMesh);
+    light2Object.transform.Scale(vec3(0.2f));
+
     PBRMaterial material;
     material.albedo = vec3(1.0f, 0.0f, 0.0f);
-    material.metallic = 0.2f;
+    material.metallic = 0.7f;
     material.roughness = 0.2f;
     material.ao = 1.0f;
 
@@ -293,6 +321,7 @@ int main(void)
 
         material.uploadUniforms(pbrProgram);
         light1.uploadUniforms(pbrProgram);
+        light2.uploadUniforms(pbrProgram);
 
         //smoothIcoSphere.draw(camera);
         //smoothNormalsObject.draw(camera);
@@ -302,9 +331,20 @@ int main(void)
 
         cerberusMaterial.uploadUniforms(mappedPbrProgram);
         light1.uploadUniforms(mappedPbrProgram);
+        light2.uploadUniforms(mappedPbrProgram);
+        cerberusNormals.transform = cerberus.transform;
+        //cerberusNormals.draw(camera);
         cerberus.draw(camera);
 
-        light1.position = vec3(3.0f * cos(time), 3.0f, 3.0f * sin(time));
+        light1.position = vec3(2.5f * cos(time/2.0f), 0.85f, 2.5f * sin(time/2.0f));
+        light1Object.transform.position = light1.position;
+        lightProgram->setUniform("color", light1.color);
+        light1Object.draw(camera);
+
+        light2.position = vec3(2.5f * cos(time), 0.85f, 2.5f * sin(time));
+        light2Object.transform.position = light2.position;
+        lightProgram->setUniform("color", light2.color);
+        light2Object.draw(camera);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

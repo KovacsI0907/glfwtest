@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <memory>
 #include "Program.h"
+#include <optional>
+#include "GameObject.h"
 
 class PointLight : public UniformProvider {
 public:
