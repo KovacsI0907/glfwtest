@@ -113,6 +113,7 @@ int main(void)
     glfwSetErrorCallback(error_callback);
 
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+    glfwWindowHint(GLFW_SAMPLES, 4);
 
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
     if (!window)
@@ -306,6 +307,7 @@ int main(void)
 
         glViewport(0, 0, width, height);
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_MULTISAMPLE);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
 
         deltaTime = time - lastTime;
