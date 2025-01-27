@@ -291,6 +291,11 @@ int main(void)
     float time = (float)glfwGetTime();
     float lastTime = time;
     float deltaTime = 0.0f;
+    float frameTimerTime = time;
+    float fpsDisplayTimer = 0.0f;
+    int avgFrameCounter = 0;
+    float avgFrameTime = 0.0f;
+    float maxFrameTime = 0.0f;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -348,6 +353,26 @@ int main(void)
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        float frametime = (float)glfwGetTime() - frameTimerTime;
+        float FPS = 1.0f / frametime;
+        avgFrameTime += frametime;
+        avgFrameCounter++;
+        if(frametime > maxFrameTime) {
+            maxFrameTime = frametime;
+        }
+        if(fpsDisplayTimer > 1.0f) {
+            float avgFrametime = avgFrameTime / avgFrameCounter;
+            float avgFPS = 1.0f / avgFrametime;
+            float minFPS = 1.0f / maxFrameTime;
+            std::cout << "Average Frame Time:       " << avgFrametime * 1000.0f << " ms, Average FPS:       " << avgFPS << std::endl;
+            std::cout << "Max Frame Time:       " << maxFrameTime * 1000.0f << " ms, Min FPS:       " << minFPS << std::endl;
+            avgFrameTime = 0.0f;
+            avgFrameCounter = 0;
+            fpsDisplayTimer = 0.0f;
+            maxFrameTime = 0.0f;
+        }
+        fpsDisplayTimer += frametime;
+        frameTimerTime = (float)glfwGetTime();
     }
 
     glfwDestroyWindow(window);
