@@ -125,7 +125,7 @@ void Program::setUniform(const std::string& name, const glm::mat4& mat) {
     }
 }
 
-void Program::setUniform(const std::string& name, GPUTexture2D& texture, GLuint slot) {
+void Program::setUniform(const std::string& name, const GPUTexture2D& texture, GLuint slot) {
     use();
     glActiveTexture(GL_TEXTURE0 + slot);
     texture.bind();

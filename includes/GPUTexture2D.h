@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Texture2D.h"
 #include <glad/glad.h>
 
-class GPUTexture2D : Texture2D {
+class GPUTexture2D {
 public:
     GPUTexture2D() {
         glGenTextures(1, &textureID);
@@ -25,15 +24,15 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     }
 
-    GLuint getID() {
+    GLuint getID() const {
         return textureID;
     }
 
-    virtual void bind() {
+    virtual void bind() const {
         glBindTexture(GL_TEXTURE_2D, textureID);
     }
 
-	virtual void unbind() {
+	virtual void unbind() const {
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     

@@ -24,14 +24,6 @@ public:
 
 	void load();
 
-	unsigned int getWidth() override {
-		return width;
-	}
-
-	unsigned int getHeight() override {
-		return height;
-	}
-
 private:
 	int width;
 	int height;

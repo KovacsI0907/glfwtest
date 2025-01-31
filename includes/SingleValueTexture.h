@@ -14,15 +14,7 @@ public:
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_FLOAT, &value);
     }
-
-	unsigned int getWidth() override {
-		return 1;
-	}
-
-	unsigned int getHeight() override {
-		return 1;
-	}
-
+	
 	GLuint getID() {
 		return textureID;
 	}

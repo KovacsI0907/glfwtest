@@ -7,10 +7,10 @@ class QuadGeometry : public NonIndexedGeometry {
 public:
     QuadGeometry() {
         // Default quad centered at origin in XY plane
-        verts[0] = glm::vec3(-0.5f, -0.5f, 0.0f);  // Bottom left
-        verts[1] = glm::vec3(0.5f, -0.5f, 0.0f);   // Bottom right
-        verts[2] = glm::vec3(-0.5f, 0.5f, 0.0f);   // Top left
-        verts[3] = glm::vec3(0.5f, 0.5f, 0.0f);    // Top right
+        verts[0] = glm::vec3(-1.0f, -1.0f, 0.0f);  // Bottom left
+        verts[1] = glm::vec3(1.0f, -1.0f, 0.0f);   // Bottom right
+        verts[2] = glm::vec3(-1.0f, 1.0f, 0.0f);   // Top left
+        verts[3] = glm::vec3(1.0f, 1.0f, 0.0f);    // Top right
         generateGeometry();
         uploadData();
     }

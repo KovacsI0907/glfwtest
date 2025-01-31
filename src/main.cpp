@@ -31,6 +31,7 @@
 #include "NonIndexedOBJ.h"
 #include "Transformation.h"
 #include "DirectionalLight.h"
+#include "Framebuffer.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -145,6 +146,8 @@ int main(void)
     auto pbr_frag_shader = std::make_shared<Shader>();
     auto pbr_frag_shader_mapped = std::make_shared<Shader>();
     auto light_frag_shader = std::make_shared<Shader>();
+    auto screen_quad_vertex = std::make_shared<Shader>();
+    auto screen_quad_fragment = std::make_shared<Shader>();
     try {
         vertex_shader->load(PathResolver::resolvePath("shaders/vertex_shader.glsl"));
         fragment_shader->load(PathResolver::resolvePath("shaders/fragment_shader.glsl"));
@@ -156,6 +159,9 @@ int main(void)
 
         light_frag_shader->load(PathResolver::resolvePath("shaders/light_fragment.glsl"));
 
+        screen_quad_vertex->load(PathResolver::resolvePath("shaders/screen_quad_vertex.glsl"));
+        screen_quad_fragment->load(PathResolver::resolvePath("shaders/screen_quad_fragment.glsl"));
+
         vertex_shader->compile(GL_VERTEX_SHADER);
         fragment_shader->compile(GL_FRAGMENT_SHADER);
         texture_frag_shader->compile(GL_FRAGMENT_SHADER);
@@ -165,6 +171,10 @@ int main(void)
         pbr_frag_shader_mapped->compile(GL_FRAGMENT_SHADER);
 
         light_frag_shader->compile(GL_FRAGMENT_SHADER);
+
+        screen_quad_vertex->compile(GL_VERTEX_SHADER);
+        screen_quad_fragment->compile(GL_FRAGMENT_SHADER);
+
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -176,6 +186,7 @@ int main(void)
     auto pbrProgram = std::make_shared<Program>();
     auto mappedPbrProgram = std::make_shared<Program>();
     auto lightProgram = std::make_shared<Program>();
+    auto screenQuadProgram = std::make_shared<Program>();
 
     try{
         program->attachShader(vertex_shader);
@@ -202,6 +213,10 @@ int main(void)
         lightProgram->attachShader(vertex_shader);
         lightProgram->attachShader(light_frag_shader);
         lightProgram->link();
+
+        screenQuadProgram->attachShader(screen_quad_vertex);
+        screenQuadProgram->attachShader(screen_quad_fragment);
+        screenQuadProgram->link();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -301,21 +316,50 @@ int main(void)
     float avgFrameTime = 0.0f;
     float maxFrameTime = 0.0f;
 
+    Framebuffer renderBuffer(640, 480);
+    auto fullScreenQuad = std::make_shared<Mesh>(quadGeometry, screenQuadProgram);
+
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    displayInfo->width = width;
+    displayInfo->height = height;
+    glViewport(0, 0, width, height);
+
+    
+    // framebuffer configuration
+    // -------------------------
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    // create a color attachment texture
+    unsigned int textureColorbuffer;
+    glGenTextures(1, &textureColorbuffer);
+    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+    // create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height); // use a single renderbuffer object for both a depth AND stencil buffer.
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
+    // now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     while (!glfwWindowShouldClose(window))
     {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        displayInfo->width = width;
-        displayInfo->height = height;
-
-        glViewport(0, 0, width, height);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_MULTISAMPLE);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  
-
         deltaTime = time - lastTime;
         lastTime = time;
         time = (float)glfwGetTime();
+
+        renderBuffer.bind();
+        glEnable(GL_DEPTH_TEST);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         cerberusMaterial.uploadUniforms(mappedPbrProgram);
 
@@ -357,6 +401,25 @@ int main(void)
         light2Object.transform.position = light2.position;
         lightProgram->setUniform("color", light2.color);
         light2Object.draw(camera);
+
+        
+        Framebuffer::bindDefault();
+        glDisable(GL_DEPTH_TEST);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+        /*
+        screenQuadProgram->use();
+        GLint location = glGetUniformLocation(screenQuadProgram->getID(), "image");
+        if (location >= 0) {
+            glUniform1i(location, 0);
+        }
+        */
+        fullScreenQuad->getProgram()->setUniform("image", renderBuffer.getTargetTexture(), 0);
+        fullScreenQuad->draw();
+
 
         glfwSwapBuffers(window);
         glfwPollEvents();
