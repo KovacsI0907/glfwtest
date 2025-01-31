@@ -85,17 +85,6 @@ void cursorPosCallback(GLFWwindow* window, double xPos, double yPos) {
 }
 
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-    /*if (cameraPtr != nullptr) {
-        float zoomAmount = static_cast<float>(yoffset) * 0.1f;
-        cameraPtr->fov -= zoomAmount;
-        if (cameraPtr->fov < 0.0001f) {
-            cameraPtr->fov = 0.0001f;
-        }
-        if (cameraPtr->fov > 3.14f) {
-            cameraPtr->fov = 3.14f;
-        }
-    }*/
-
    if(cameraPtr != nullptr) {
         if(yoffset > 0) {
             cameraPtr->transform.position *= 1.0f/1.1f;
@@ -299,8 +288,6 @@ int main(void)
     material.roughness = 0.2f;
     material.ao = 1.0f;
 
-
-
     auto displayInfo = std::make_shared<DisplayInfo>(640, 480, true, DisplayInfo::Windowed, 0);
 
     PerspectiveCamera camera(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), 45.0f, 0.01f, 100.0f, displayInfo);
@@ -337,36 +324,17 @@ int main(void)
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        cerberusMaterial.uploadUniforms(mappedPbrProgram);
-
-        texturedProgram->setUniform("albedoMap", uvgrid, 0);
-        //quad.draw(camera);
-
-        program->setUniform("color", vec3(0.0f, 1.0f, 0.0f));
-        //cube.draw(camera);
-
-        texturedProgram->use();
-        //monkey.draw(camera);
-        //normalsObject.draw(camera);
-
-        material.uploadUniforms(pbrProgram);
-        light1.uploadUniforms(pbrProgram);
-        light2.uploadUniforms(pbrProgram);
-        sunLight.uploadUniforms(pbrProgram);
-
-        //smoothIcoSphere.draw(camera);
+        smoothNormalsObject.transform = smoothIcoSphere.transform;
+        //smoothIcoSphere.draw(camera, light1, light2, sunLight, material);
         //smoothNormalsObject.draw(camera);
 
-        flatIcoSphere.draw(camera);
+        flatNormalsObject.transform = flatIcoSphere.transform;
+        flatIcoSphere.draw(camera, light1, light2, sunLight, material);
         //flatNormalsObject.draw(camera);
 
-        cerberusMaterial.uploadUniforms(mappedPbrProgram);
-        light1.uploadUniforms(mappedPbrProgram);
-        light2.uploadUniforms(mappedPbrProgram);
-        sunLight.uploadUniforms(mappedPbrProgram);
         cerberusNormals.transform = cerberus.transform;
+        cerberus.draw(camera, cerberusMaterial, light1, light2, sunLight);
         //cerberusNormals.draw(camera);
-        cerberus.draw(camera);
 
         light1.position = vec3(2.5f * cos(time/2.0f), 0.85f, 2.5f * sin(time/2.0f));
         light1Object.transform.position = light1.position;
