@@ -42,7 +42,7 @@ add_custom_command(
 
 # Add a custom target for preprocessing shaders
 add_custom_target(preprocess_shaders ALL
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/scripts python3 ${CMAKE_SOURCE_DIR}/scripts/preprocess_glsl.py ${CMAKE_SOURCE_DIR}/gamefiles/shaders
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/scripts python3 ${CMAKE_SOURCE_DIR}/scripts/preprocess_glsl.py ${CMAKE_SOURCE_DIR}/gamefiles/shaders ${CMAKE_BINARY_DIR}/temp_shaders
     COMMENT "Preprocessing GLSL shaders"
     DEPENDS ${CMAKE_SOURCE_DIR}/gamefiles/shaders/*.glsl
 )
@@ -50,10 +50,10 @@ add_custom_target(preprocess_shaders ALL
 # Ensure the preprocess_shaders target runs after the build is done
 add_dependencies(${PROJECT_NAME} preprocess_shaders)
 
-# Copy the temp folder containing the preprocessed shaders to the correct target directory
+# Copy the temp folder (located in the build directory) containing the preprocessed shaders to the correct target directory
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/gamefiles/shaders/temp
+        ${CMAKE_BINARY_DIR}/temp_shaders
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders
 )

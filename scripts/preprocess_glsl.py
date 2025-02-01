@@ -2,13 +2,12 @@ import os
 import shutil
 import sys
 
-def preprocess_glsl_files(shaders_folder):
-    # Set up directories
+def preprocess_glsl_files(shaders_folder, temp_folder):
+    # Set up the includes folder
     includes_folder = os.path.join(shaders_folder, 'includes')
-    temp_folder = os.path.join(shaders_folder, 'temp')
     os.makedirs(temp_folder, exist_ok=True)
 
-    # Loop through all GLSL files in shaders folder
+    # Loop through all GLSL files in the shaders folder
     for root, dirs, files in os.walk(shaders_folder):
         for file in files:
             if file.endswith('.glsl'):
@@ -46,9 +45,10 @@ def preprocess_glsl_files(shaders_folder):
 
     print(f"Shaders have been preprocessed and saved in {temp_folder}")
 
-# Get the shaders folder path from the command line argument
-if len(sys.argv) < 2:
-    print("Usage: python preprocess_glsl.py <shaders_folder>")
+# Get the shaders folder and temp folder paths from the command line arguments
+if len(sys.argv) < 3:
+    print("Usage: python preprocess_glsl.py <shaders_folder> <temp_folder>")
 else:
     shaders_folder = sys.argv[1]
-    preprocess_glsl_files(shaders_folder)
+    temp_folder = sys.argv[2]
+    preprocess_glsl_files(shaders_folder, temp_folder)
