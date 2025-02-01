@@ -32,6 +32,7 @@
 #include "Transformation.h"
 #include "DirectionalLight.h"
 #include "Framebuffer.h"
+#include "DepthBuffer.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -137,6 +138,9 @@ int main(void)
     auto light_frag_shader = std::make_shared<Shader>();
     auto screen_quad_vertex = std::make_shared<Shader>();
     auto screen_quad_fragment = std::make_shared<Shader>();
+    auto depth_map_vertex = std::make_shared<Shader>();
+    auto depth_map_fragment = std::make_shared<Shader>();
+
     try {
         vertex_shader->load(PathResolver::resolvePath("shaders/vertex_shader.glsl"));
         fragment_shader->load(PathResolver::resolvePath("shaders/fragment_shader.glsl"));
@@ -151,6 +155,9 @@ int main(void)
         screen_quad_vertex->load(PathResolver::resolvePath("shaders/screen_quad_vertex.glsl"));
         screen_quad_fragment->load(PathResolver::resolvePath("shaders/screen_quad_fragment.glsl"));
 
+        depth_map_vertex->load(PathResolver::resolvePath("shaders/depth_map.vertex"));
+        depth_map_fragment->load(PathResolver::resolvePath("shaders/depth_map.fragment"));
+
         vertex_shader->compile(GL_VERTEX_SHADER);
         fragment_shader->compile(GL_FRAGMENT_SHADER);
         texture_frag_shader->compile(GL_FRAGMENT_SHADER);
@@ -164,6 +171,8 @@ int main(void)
         screen_quad_vertex->compile(GL_VERTEX_SHADER);
         screen_quad_fragment->compile(GL_FRAGMENT_SHADER);
 
+        depth_map_vertex->compile(GL_VERTEX_SHADER);
+        depth_map_fragment->compile(GL_FRAGMENT_SHADER);
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -176,6 +185,7 @@ int main(void)
     auto mappedPbrProgram = std::make_shared<Program>();
     auto lightProgram = std::make_shared<Program>();
     auto screenQuadProgram = std::make_shared<Program>();
+    auto depthMapProgram = std::make_shared<Program>();
 
     try{
         program->attachShader(vertex_shader);
@@ -206,6 +216,10 @@ int main(void)
         screenQuadProgram->attachShader(screen_quad_vertex);
         screenQuadProgram->attachShader(screen_quad_fragment);
         screenQuadProgram->link();
+
+        depthMapProgram->attachShader(depth_map_vertex);
+        depthMapProgram->attachShader(depth_map_fragment);
+        depthMapProgram->link();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -246,16 +260,16 @@ int main(void)
     auto cerberusGeometry = std::make_shared<NonIndexedObj>(PathResolver::resolvePath("models/cerberus.obj"));
 
     auto quadMesh = std::make_shared<Mesh>(quadGeometry, texturedProgram);
-    auto cubeMesh = std::make_shared<Mesh>(cubeGeometry, program);
-    auto monkeyMesh = std::make_shared<Mesh>(monkeyGeometry, texturedProgram);
+    auto cubeMesh = std::make_shared<Mesh>(cubeGeometry, program, depthMapProgram);
+    auto monkeyMesh = std::make_shared<Mesh>(monkeyGeometry, texturedProgram, depthMapProgram);
     auto normalsMesh = std::make_shared<Mesh>(monkeyGeometry, normalProgram);
-    auto cerberusMesh = std::make_shared<Mesh>(cerberusGeometry, mappedPbrProgram);
+    auto cerberusMesh = std::make_shared<Mesh>(cerberusGeometry, mappedPbrProgram, depthMapProgram);
     auto cerberusNormalsMesh = std::make_shared<Mesh>(cerberusGeometry, normalProgram);
     auto lightMesh = std::make_shared<Mesh>(cubeGeometry, lightProgram);
 
-    auto smoothIcoSphereMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, pbrProgram);
+    auto smoothIcoSphereMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, pbrProgram, depthMapProgram);
     auto smoothNormalsMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, normalProgram);
-    auto flatIcoSphereMesh = std::make_shared<Mesh>(flatIcoSphereGeometry, pbrProgram);
+    auto flatIcoSphereMesh = std::make_shared<Mesh>(flatIcoSphereGeometry, pbrProgram, depthMapProgram);
     auto flatNormalsMesh = std::make_shared<Mesh>(flatIcoSphereGeometry, normalProgram);
 
     GameObject quad(quadMesh);
@@ -280,7 +294,7 @@ int main(void)
     GameObject light2Object(lightMesh);
     light2Object.transform.Scale(vec3(0.2f));
 
-    DirectionalLight sunLight(vec3(0.0f, -1.0f, 0.0f), vec3(20.0f, 20.0f, 20.0f));
+    DirectionalLight sunLight(vec3(-1.0f), vec3(20.0f, 20.0f, 20.0f));
 
     PBRMaterial material;
     material.albedo = vec3(1.0f, 0.0f, 0.0f);
@@ -306,6 +320,8 @@ int main(void)
     Framebuffer renderBuffer(640, 480);
     auto fullScreenQuad = std::make_shared<Mesh>(quadGeometry, screenQuadProgram);
 
+    Depthbuffer depthBuffer(1024, 1024);
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     displayInfo->width = width;
@@ -319,41 +335,55 @@ int main(void)
         lastTime = time;
         time = (float)glfwGetTime();
 
-        renderBuffer.bind();
+        depthBuffer.bind();
+        glViewport(0,0,1024,1024);
         glEnable(GL_DEPTH_TEST);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glm::mat4 lightMatrix = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 5.0f) * glm::lookAt(-sunLight.direction, vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+        depthMapProgram->setUniform("lightSpaceMatrix", lightMatrix);
+        cerberus.depthMapDraw();
+        flatIcoSphere.depthMapDraw();
+
+        renderBuffer.bind();
+        glViewport(0,0, width, height);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        mappedPbrProgram->setUniform("lightSpaceMatrix", lightMatrix);
+        mappedPbrProgram->setUniform("depthMap", depthBuffer.getTargetTexture(), 5);
+
 
         smoothNormalsObject.transform = smoothIcoSphere.transform;
         //smoothIcoSphere.draw(camera, light1, light2, sunLight, material);
         //smoothNormalsObject.draw(camera);
 
         flatNormalsObject.transform = flatIcoSphere.transform;
-        flatIcoSphere.draw(camera, light1, light2, sunLight, material);
+        //flatIcoSphere.draw(camera, light1, light2, sunLight, material);
         //flatNormalsObject.draw(camera);
 
         cerberusNormals.transform = cerberus.transform;
-        cerberus.draw(camera, cerberusMaterial, light1, light2, sunLight);
+        cerberus.draw(camera, cerberusMaterial, sunLight);
         //cerberusNormals.draw(camera);
 
         light1.position = vec3(2.5f * cos(time/2.0f), 0.85f, 2.5f * sin(time/2.0f));
         light1Object.transform.position = light1.position;
         lightProgram->setUniform("color", light1.color);
-        light1Object.draw(camera);
+        //light1Object.draw(camera);
 
         light2.position = vec3(2.5f * cos(time), 0.85f, 2.5f * sin(time));
         light2Object.transform.position = light2.position;
         lightProgram->setUniform("color", light2.color);
-        light2Object.draw(camera);
+        //light2Object.draw(camera);
 
         
         Framebuffer::bindDefault();
         glDisable(GL_DEPTH_TEST);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
         fullScreenQuad->getProgram()->setUniform("image", renderBuffer.getTargetTexture(), 0);
+        //fullScreenQuad->getProgram()->setUniform("depthMap", depthBuffer.getTargetTexture(), 0);
         fullScreenQuad->draw();
 
 
@@ -370,8 +400,8 @@ int main(void)
             float avgFrametime = avgFrameTime / avgFrameCounter;
             float avgFPS = 1.0f / avgFrametime;
             float minFPS = 1.0f / maxFrameTime;
-            std::cout << "Average Frame Time:       " << avgFrametime * 1000.0f << " ms, Average FPS:       " << avgFPS << std::endl;
-            std::cout << "Max Frame Time:       " << maxFrameTime * 1000.0f << " ms, Min FPS:       " << minFPS << std::endl;
+            //std::cout << "Average Frame Time:       " << avgFrametime * 1000.0f << " ms, Average FPS:       " << avgFPS << std::endl;
+            //std::cout << "Max Frame Time:       " << maxFrameTime * 1000.0f << " ms, Min FPS:       " << minFPS << std::endl;
             avgFrameTime = 0.0f;
             avgFrameCounter = 0;
             fpsDisplayTimer = 0.0f;

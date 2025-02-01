@@ -18,14 +18,16 @@ public:
 
     template<typename... UniformProviders>
     void draw(UniformProviders... providers) {
-		mesh->getProgram()->use();
         uploadUniforms(mesh->getProgram());
 
-        (providers.uploadUniforms(mesh->getProgram()), ...);
-
+        
         if (mesh) {
-            mesh->draw();
+            mesh->draw(providers...);
         }
+    }
+
+    void depthMapDraw() {
+        mesh->depthMapDraw(*this);
     }
 
     void uploadUniforms(std::shared_ptr<Program> program) override {

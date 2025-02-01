@@ -4,6 +4,7 @@ in vec2 texCoord;
 in vec3 worldPos;
 in vec3 worldNormal;
 in vec3 worldTangent;
+in vec3 posLightSpace;
 
 // material parameters
 
@@ -28,6 +29,8 @@ uniform PointLight pointLights[4];
 uniform DirectionalLight directionalLights[2];
 
 uniform vec3 camPosW;
+
+uniform sampler2D depthMap;
 
 // Declare the global zero variable
 bool zero = false;
@@ -98,6 +101,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 // ----------------------------------------------------------------------------
 void main()
 {	
+
     // calculate mapped normal
     vec3 cotangent = cross(worldTangent, worldNormal);
     vec3 mapValue = texture(normalMap, texCoord).xyz * 2.0 - 1.0;
@@ -105,6 +109,14 @@ void main()
 
     vec3 N = normalize(mappedNormal);
     vec3 V = normalize(camPosW - worldPos);
+
+    //shadow
+    vec3 projCoords = posLightSpace;
+    projCoords = projCoords * 0.5 + 0.5;
+    float closestDepth = texture(depthMap, projCoords.xy).r; 
+    float currentDepth = projCoords.z;
+    float bias = max(0.005 * (1.0 - dot(N, directionalLights[0].direction)), 0.0005);
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
 
     // gather material data from textures
     vec3 albedo = texture(albedoMap, texCoord).rgb;
@@ -196,7 +208,8 @@ void main()
     // this ambient lighting with environment lighting).
     vec3 ambient = vec3(0.03) * albedo * ao;
 
-    vec3 color = ambient + Lo;
+    vec3 color = ambient + Lo * (1.0-shadow);
+
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));
