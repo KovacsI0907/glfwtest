@@ -32,10 +32,28 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLAD_SOURCE} )
 # Link dependencies
 target_link_libraries(${PROJECT_NAME} glfw)
 
-# Copy gamefiles directory contents to the build directory
+# Copy gamefiles directory contents to the build directory (without preprocessing)
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/gamefiles
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
+)
+
+# Add a custom target for preprocessing shaders
+add_custom_target(preprocess_shaders ALL
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/scripts python3 ${CMAKE_SOURCE_DIR}/scripts/preprocess_glsl.py ${CMAKE_SOURCE_DIR}/gamefiles/shaders
+    COMMENT "Preprocessing GLSL shaders"
+    DEPENDS ${CMAKE_SOURCE_DIR}/gamefiles/shaders/*.glsl
+)
+
+# Ensure the preprocess_shaders target runs after the build is done
+add_dependencies(${PROJECT_NAME} preprocess_shaders)
+
+# Copy the temp folder containing the preprocessed shaders to the correct target directory
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/gamefiles/shaders/temp
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders
 )
