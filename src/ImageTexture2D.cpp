@@ -40,7 +40,46 @@ void ImageTexture2D::load() {
     }
     else
     {
-        throw ImageLoadException("Failed to load texture");
+        throw ImageLoadException("Failed to load texture: " + path.string());
     }
     stbi_image_free(data);
+}
+
+ImageCubeMapTexture::ImageCubeMapTexture(const std::vector<std::filesystem::path> imagePaths) : paths(imagePaths) {
+    if(imagePaths.size() != 6){
+        throw std::runtime_error("Cubemap needs to have 6 images");
+    }
+}
+
+void ImageCubeMapTexture::load() {
+    bind();
+    stbi_set_flip_vertically_on_load(false);
+
+    int width, height, nrChannels;
+    for (size_t i = 0; i < paths.size(); i++)
+    {
+        unsigned char *data = stbi_load(paths[i].string().c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            if (nrChannels == 3)
+            {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            }
+            else if (nrChannels == 4)
+            {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            }
+            else
+            {
+                throw ImageLoadException("Unsupported number of channels");
+            }
+            //TODO do we need mipmaps?
+            //glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else
+        {
+            throw ImageLoadException("Failed to load texture: " + paths[i].string());
+        }
+        stbi_image_free(data);
+    }
 }

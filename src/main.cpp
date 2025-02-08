@@ -140,6 +140,8 @@ int main(void)
     auto screen_quad_fragment = std::make_shared<Shader>();
     auto depth_map_vertex = std::make_shared<Shader>();
     auto depth_map_fragment = std::make_shared<Shader>();
+    auto skybox_vertex = std::make_shared<Shader>();
+    auto skybox_fragment = std::make_shared<Shader>();
 
     try {
         vertex_shader->load(PathResolver::resolvePath("shaders/vertex_shader.glsl"));
@@ -158,6 +160,9 @@ int main(void)
         depth_map_vertex->load(PathResolver::resolvePath("shaders/depth_map.vertex"));
         depth_map_fragment->load(PathResolver::resolvePath("shaders/depth_map.fragment"));
 
+        skybox_vertex->load(PathResolver::resolvePath("shaders/skybox.vertex"));
+        skybox_fragment->load(PathResolver::resolvePath("shaders/skybox.fragment"));
+
         vertex_shader->compile(GL_VERTEX_SHADER);
         fragment_shader->compile(GL_FRAGMENT_SHADER);
         texture_frag_shader->compile(GL_FRAGMENT_SHADER);
@@ -173,6 +178,9 @@ int main(void)
 
         depth_map_vertex->compile(GL_VERTEX_SHADER);
         depth_map_fragment->compile(GL_FRAGMENT_SHADER);
+
+        skybox_vertex->compile(GL_VERTEX_SHADER);
+        skybox_fragment->compile(GL_FRAGMENT_SHADER);
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -186,6 +194,7 @@ int main(void)
     auto lightProgram = std::make_shared<Program>();
     auto screenQuadProgram = std::make_shared<Program>();
     auto depthMapProgram = std::make_shared<Program>();
+    auto skyboxProgram = std::make_shared<Program>();
 
     try{
         program->attachShader(vertex_shader);
@@ -220,10 +229,23 @@ int main(void)
         depthMapProgram->attachShader(depth_map_vertex);
         depthMapProgram->attachShader(depth_map_fragment);
         depthMapProgram->link();
+
+        skyboxProgram->attachShader(skybox_vertex);
+        skyboxProgram->attachShader(skybox_fragment);
+        skyboxProgram->link();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
     }
+
+    std::vector<std::filesystem::path> skyboxPaths;
+    skyboxPaths.push_back(PathResolver::resolvePath("textures/skyboxes/bluecloud_rt.jpg"));
+    skyboxPaths.push_back(PathResolver::resolvePath("textures/skyboxes/bluecloud_lf.jpg"));
+    skyboxPaths.push_back(PathResolver::resolvePath("textures/skyboxes/bluecloud_up.jpg"));
+    skyboxPaths.push_back(PathResolver::resolvePath("textures/skyboxes/bluecloud_dn.jpg"));
+    skyboxPaths.push_back(PathResolver::resolvePath("textures/skyboxes/bluecloud_bk.jpg"));
+    skyboxPaths.push_back(PathResolver::resolvePath("textures/skyboxes/bluecloud_ft.jpg"));
+    auto skyboxTexture = std::make_unique<ImageCubeMapTexture>(skyboxPaths);
 
     ImageTexture2D uvgrid(PathResolver::resolvePath("textures/uvgrid.png"));
     auto cerberusAlbedo = std::make_shared<ImageTexture2D>(PathResolver::resolvePath("textures/cerberus_albedo.png"));
@@ -239,6 +261,7 @@ int main(void)
         cerberusMetallic->load();
         cerberusRoughness->load();
         cerberusNormal->load();
+        skyboxTexture->load();
     }
     catch (std::exception& e) {
         std::cout << e.what() << std::endl;
@@ -259,6 +282,7 @@ int main(void)
     auto flatIcoSphereGeometry = std::make_shared<OBJGeometry>(PathResolver::resolvePath("models/icosphere_flat_high.obj"));
     auto cerberusGeometry = std::make_shared<NonIndexedObj>(PathResolver::resolvePath("models/cerberus.obj"));
 
+    auto skyboxMesh = std::make_shared<Mesh>(cubeGeometry, skyboxProgram);
     auto quadMesh = std::make_shared<Mesh>(quadGeometry, texturedProgram);
     auto cubeMesh = std::make_shared<Mesh>(cubeGeometry, program, depthMapProgram);
     auto monkeyMesh = std::make_shared<Mesh>(monkeyGeometry, texturedProgram, depthMapProgram);
@@ -271,6 +295,8 @@ int main(void)
     auto smoothNormalsMesh = std::make_shared<Mesh>(smoothIcoSphereGeometry, normalProgram);
     auto flatIcoSphereMesh = std::make_shared<Mesh>(flatIcoSphereGeometry, pbrProgram, depthMapProgram);
     auto flatNormalsMesh = std::make_shared<Mesh>(flatIcoSphereGeometry, normalProgram);
+
+    GameObject skybox(skyboxMesh);
 
     GameObject quad(quadMesh);
     GameObject cube(cubeMesh);
@@ -348,6 +374,12 @@ int main(void)
         glViewport(0,0, width, height);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //skybox
+        glDepthMask(GL_FALSE);
+        skybox.transform.position = camera.wEye();
+        skybox.draw(camera);
+        glDepthMask(GL_TRUE);
 
         mappedPbrProgram->setUniform("lightSpaceMatrix", lightMatrix);
         mappedPbrProgram->setUniform("depthMap", depthBuffer.getTargetTexture(), 5);

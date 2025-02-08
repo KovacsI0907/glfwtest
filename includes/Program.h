@@ -6,6 +6,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <ImageTexture2D.h>
+#include <CubeMapTexture.h>
 
 class Program {
 public:
@@ -30,6 +31,7 @@ public:
     void setUniform(const std::string& name, const glm::mat3& mat);
     void setUniform(const std::string& name, const glm::mat4& mat);
     void setUniform(const std::string& name, const GPUTexture2D& texture, GLuint slot);
+    void setUnfirom(const std::string& name, const CubeMapTexture& texture, GLuint slot);
     void setUniform(const std::string& name, int num);
 
 private:

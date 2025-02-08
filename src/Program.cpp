@@ -135,6 +135,16 @@ void Program::setUniform(const std::string& name, const GPUTexture2D& texture, G
     }
 }
 
+void Program::setUnfirom(const std::string& name, const CubeMapTexture& texture, GLuint slot){
+    use();
+    glActiveTexture(GL_TEXTURE0 + slot);
+    texture.bind();
+    GLint location = glGetUniformLocation(programID, name.c_str());
+    if (location >= 0) {
+        glUniform1i(location, slot);
+    }
+}
+
 void Program::setUniform(const std::string& name, int num) {
     GLint location = glGetUniformLocation(programID, name.c_str());
     if (location >= 0) {
