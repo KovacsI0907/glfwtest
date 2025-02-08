@@ -22,106 +22,49 @@ struct DirectionalLight {
 };
 
 uniform PointLight pointLights[4];
-uniform DirectionalLight directionalLights[2];
+uniform DirectionalLight directionalLight;
 
 uniform vec3 camPosW;
 
 #include "debug.glsl"
 #include "pbr.glsl"
 
+// New function to calculate per-light contribution
+
 void main()
 {		
     vec3 N = normalize(worldNormal);
     vec3 V = normalize(camPosW - worldPos);
 
-    // calculate reflectance at worldNormal incidence; if dia-electric (like plastic) use F0 
-    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
+    // Calculate F0 based on metalness.
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
 
     // reflectance equation
     vec3 Lo = vec3(0.0);
+    // point lights
     for(int i = 0; i < 4; ++i) 
     {
-        // calculate per-light radiance
         vec3 L = normalize(pointLights[i].position - worldPos);
-        vec3 H = normalize(V + L);
         float distance = length(pointLights[i].position - worldPos);
         float attenuation = 1.0 / (distance * distance);
         vec3 radiance = pointLights[i].color * attenuation;
-
-        // Cook-Torrance BRDF
-        float NDF = DistributionGGX(N, H, roughness);   
-        float G   = GeometrySmith(N, V, L, roughness);      
-        vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
-           
-        vec3 numerator    = NDF * G * F; 
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-        vec3 specular = numerator / denominator;
-        
-        // kS is equal to Fresnel
-        vec3 kS = F;
-        // for energy conservation, the diffuse and specular light can't
-        // be above 1.0 (unless the surface emits light); to preserve this
-        // relationship the diffuse component (kD) should equal 1.0 - kS.
-        vec3 kD = vec3(1.0) - kS;
-        // multiply kD by the inverse metalness such that only non-metals 
-        // have diffuse lighting, or a linear blend if partly metal (pure metals
-        // have no diffuse light).
-        kD *= 1.0 - metallic;	  
-
-        // scale light by NdotL
-        float NdotL = max(dot(N, L), 0.0);        
-
-        // add to outgoing radiance Lo
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+        Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness);
     }   
 
-    // directional lights
-    for(int i = 0; i < 2; ++i) 
-    {
-        // calculate per-light radiance
-        vec3 L = normalize(-directionalLights[i].direction);
-        vec3 H = normalize(V + L);
-        vec3 radiance = directionalLights[i].color;
-
-        // Cook-Torrance BRDF
-        float NDF = DistributionGGX(N, H, roughness);   
-        float G   = GeometrySmith(N, V, L, roughness);      
-        vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
-           
-        vec3 numerator    = NDF * G * F; 
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-        vec3 specular = numerator / denominator;
-        
-        // kS is equal to Fresnel
-        vec3 kS = F;
-        // for energy conservation, the diffuse and specular light can't
-        // be above 1.0 (unless the surface emits light); to preserve this
-        // relationship the diffuse component (kD) should equal 1.0 - kS.
-        vec3 kD = vec3(1.0) - kS;
-        // multiply kD by the inverse metalness such that only non-metals 
-        // have diffuse lighting, or a linear blend if partly metal (pure metals
-        // have no diffuse light).
-        kD *= 1.0 - metallic;	  
-
-        // scale light by NdotL
-        float NdotL = max(dot(N, L), 0.0);        
-
-        // add to outgoing radiance Lo
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
-    }   
+    // directional light
+    vec3 L = normalize(-directionalLight.direction);
+    vec3 radiance = directionalLight.color;
+    Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness);
     
-    // ambient lighting (note that the next IBL tutorial will replace 
-    // this ambient lighting with environment lighting).
+    // ambient lighting (to be replaced later with IBL)
     vec3 ambient = vec3(0.03) * albedo * ao;
-
     vec3 color = ambient + Lo;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));
-    // gamma correct
-    color = pow(color, vec3(1.0/2.2)); 
+    // Gamma correction
+    color = pow(color, vec3(1.0 / 2.2)); 
 
     FragColor = vec4(color, 1.0);
 

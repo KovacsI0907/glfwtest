@@ -28,4 +28,5 @@ private:
 
     std::string shaderSource;
     GLuint shaderID;
+    std::string name;
 };

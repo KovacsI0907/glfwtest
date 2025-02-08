@@ -42,6 +42,8 @@ void Shader::load(const std::filesystem::path& filePath) {
     if (shaderSource.empty()) {
         throw std::runtime_error("Shader file is empty: " + filePath.string());
     }
+
+    name = filePath.filename().string();
 }
 
 void Shader::compile(GLenum shaderType) {
@@ -60,7 +62,7 @@ void Shader::compile(GLenum shaderType) {
     if (!success) {
         char infoLog[512];
         glGetShaderInfoLog(shaderID, sizeof(infoLog), nullptr, infoLog);
-        throw std::runtime_error("Shader compilation failed: " + std::string(infoLog));
+        throw std::runtime_error("Shader compilation failed (" + name + "): " + std::string(infoLog));
     }
 }
 
