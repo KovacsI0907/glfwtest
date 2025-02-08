@@ -3,12 +3,14 @@ out vec4 FragColor;
 in vec2 texCoord;
 in vec3 worldPos;
 in vec3 worldNormal;
+in vec3 posLightSpace;
 
 // material parameters
 uniform vec3 albedo;
 uniform float metallic;
 uniform float roughness;
 uniform float ao;
+uniform sampler2D depthMap;
 
 // lights
 struct PointLight {
@@ -28,6 +30,7 @@ uniform vec3 camPosW;
 
 #include "debug.glsl"
 #include "pbr.glsl"
+#include "shadow.glsl"
 
 // New function to calculate per-light contribution
 
@@ -53,9 +56,10 @@ void main()
     }   
 
     // directional light
+    float shadow = shadowCalc(posLightSpace, depthMap, N, directionalLight);
     vec3 L = normalize(-directionalLight.direction);
     vec3 radiance = directionalLight.color;
-    Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness);
+    Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness) * (1.0-shadow);
     
     // ambient lighting (to be replaced later with IBL)
     vec3 ambient = vec3(0.03) * albedo * ao;

@@ -14,9 +14,7 @@ uniform sampler2D metallicMap;
 uniform sampler2D aoMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D normalMap;
-
-#include "debug.glsl"
-#include "pbr.glsl"
+uniform sampler2D depthMap;
 
 struct PointLight {
     vec3 position;
@@ -28,12 +26,14 @@ struct DirectionalLight {
     vec3 color;
 };
 
+#include "debug.glsl"
+#include "pbr.glsl"
+#include "shadow.glsl"
+
 uniform PointLight pointLights[4];
 uniform DirectionalLight directionalLight;
 
 uniform vec3 camPosW;
-
-uniform sampler2D depthMap;
 
 void main()
 {	
@@ -43,13 +43,6 @@ void main()
     vec3 mappedNormal = worldTangent * mapValue.x + cotangent * mapValue.y + worldNormal * mapValue.z;
     vec3 N = normalize(mappedNormal);
     vec3 V = normalize(camPosW - worldPos);
-
-    // shadow
-    vec3 projCoords = posLightSpace * 0.5 + 0.5;
-    float closestDepth = texture(depthMap, projCoords.xy).r; 
-    float currentDepth = projCoords.z;
-    float bias = max(0.005 * (1.0 - dot(N, directionalLight.direction)), 0.0005);
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
 
     // gather material data from textures
     vec3 albedo = texture(albedoMap, texCoord).rgb;
@@ -73,18 +66,15 @@ void main()
         Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness);
     }
 
-    // directional lights
-    for(int i = 0; i < 2; ++i) 
-    {
-        vec3 L = normalize(-directionalLight.direction);
-        vec3 radiance = directionalLight.color;
-        
-        Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness);
-    }   
+    // directional light
+    float shadow = shadowCalc(posLightSpace, depthMap, N, directionalLight);
+    vec3 L = normalize(-directionalLight.direction);
+    vec3 radiance = directionalLight.color;
+    Lo += CalcLight(L, radiance, F0, N, V, albedo, metallic, roughness) * (1.0-shadow);
     
     // ambient lighting (to be replaced later with environment lighting)
     vec3 ambient = vec3(0.03) * albedo * ao;
-    vec3 color = ambient + Lo * (1.0 - shadow);
+    vec3 color = ambient + Lo;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));

@@ -394,7 +394,7 @@ int main(void)
         //flatNormalsObject.draw(camera);
 
         cerberusNormals.transform = cerberus.transform;
-        cerberus.draw(camera, cerberusMaterial, sunLight);
+        cerberus.draw(camera, cerberusMaterial, sunLight, light2);
         //cerberusNormals.draw(camera);
 
         light1.position = vec3(2.5f * cos(time/2.0f), 0.85f, 2.5f * sin(time/2.0f));
